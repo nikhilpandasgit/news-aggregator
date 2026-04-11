@@ -9,8 +9,13 @@ from formatter import format_digest
 
 def run():
     try:
-        articles = fetch_articles(MAX_ARTICLES)
+        print("Fetching articles...")
+        articles = fetch_articles(KEYWORDS, MAX_ARTICLES)
+        print(f"  → {len(articles)} fetched")
+
         articles = filter_articles(articles, KEYWORDS)
+        print(f"  → {len(articles)} matched after scoring")
+
         articles = articles[:MAX_IN_DIGEST]
 
         if not articles:

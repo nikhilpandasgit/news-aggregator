@@ -18,5 +18,4 @@ def fetch_articles(max_results: int = 40) -> list[dict]:
         timeout=10,
     )
     resp.raise_for_status()
-    print(resp.json())
     return resp.json().get("articles", [])

@@ -23,6 +23,6 @@ jobs:
       - run: python main.py
         env:
           NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
-          GMAIL_USER: ${{ secrets.EMAIL_USER }}
-          GMAIL_APP_PASS: ${{ secrets.EMAIL_APP_PASSWORD }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_APP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
+          RECEIVER_MAIL : ${{ secrets.RECEIVER_MAIL }}  
