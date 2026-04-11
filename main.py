@@ -10,7 +10,7 @@ from formatter import format_digest
 def run():
     try:
         print("Fetching articles...")
-        articles = fetch_articles(KEYWORDS, MAX_ARTICLES)
+        articles = fetch_articles(MAX_ARTICLES)
         print(f"  → {len(articles)} fetched")
 
         articles = filter_articles(articles, KEYWORDS)
