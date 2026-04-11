@@ -1,6 +1,6 @@
 # 📰 Personal News Agent
  
-A lightweight, self-hosted news aggregator built for myself — no subscriptions, no algorithmic feeds, no noise. Just the topics I care about, delivered to my inbox twice a day.
+A lightweight, self-hosted news aggregator built for myself. Just the topics I care about, delivered to my inbox twice a day.
  
 ## What it does
  
