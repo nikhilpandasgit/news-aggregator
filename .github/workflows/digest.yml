@@ -20,8 +20,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Run only in correct IST window
-        run: python scheduler_guard.py
+      - run: python main.py
 
         env:
           NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
