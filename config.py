@@ -17,10 +17,13 @@ FETCH_TERMS_BY_TOPIC: dict[str, list[str]] = {
     "Jobs & Hiring": [
         "remote job",
         "tech hiring",
+        "job opportunity",
     ],
     "Travel & Nomad": [
         "solo travel",
         "digital nomad",
+        "budget travel",
+        "travel guide",
     ],
 }
 

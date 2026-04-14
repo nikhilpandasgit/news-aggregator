@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import logging
 import sys
 from collections import Counter
@@ -9,6 +10,7 @@ from fetcher import fetch_articles
 from filter import filter_articles
 from formatter import format_digest
 from email_sender import send_email
+from database import init_db, save_articles, save_run
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,6 +23,9 @@ logger = logging.getLogger(__name__)
 
 def run():
     logger.info("Starting news agent")
+    
+    init_db()
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     # 1. fetch
     try:
@@ -48,12 +53,17 @@ def run():
     except Exception as exc:
         logger.error("Formatting failed: %s", exc)
 
-    # 4. send
+    # 4. send email
     try:
         send_email(subject, html)
         logger.info("Digest sent.")
     except Exception as exc:
         logger.error("Email failed: %s", exc)
+        
+    # 5. Update delivered articles in database
+    topics = list({a.get("_topic", "General") for a in articles})
+    save_run(run_id, len(articles), topics)
+    save_articles(articles, run_id)
 
 if __name__ == "__main__":
     run()
