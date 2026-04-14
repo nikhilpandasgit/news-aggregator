@@ -9,16 +9,28 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
 IS_PRODUCTION = os.getenv("PRODUCTION") == 'true'
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 def init_db():
     logger.info("Supabase connected.")
 
+def get_client() -> Client:
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_ANON_KEY")
+
+    if not url:
+        raise ValueError("SUPABASE_URL is missing")
+    if not key:
+        raise ValueError("SUPABASE_ANON_KEY is missing")
+
+    return create_client(url, key)
+
 
 # Save each run to `runs` table
 def save_run(run_id: str, article_count: int, topics: list[str]) -> None:
     now = datetime.now(timezone.utc).isoformat()
+    supabase = get_client()
     
     supabase.table("runs").insert({
         "run_id": run_id,
@@ -34,6 +46,7 @@ def save_run(run_id: str, article_count: int, topics: list[str]) -> None:
 # save articles per run to `articles` table
 def save_articles(articles: list[dict], run_id: str) -> None:
     now = datetime.now(timezone.utc).isoformat()
+    supabase = get_client()
     
     rows = [
         {
