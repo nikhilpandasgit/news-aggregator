@@ -10,6 +10,25 @@ def _tokenise(text: str) -> list[str]:
     return re.findall(r"[a-z0-9]+", text.lower())
 
 
+# Jaccard similarity between two sets of tokens
+def _jaccard(a: str, b: str) -> float:
+    sa, sb = set(_tokenise(a)), set(_tokenise(b))
+    if not sa or not sb:
+        return 0.0
+    return len(sa & sb) / len(sa | sb)
+
+
+
+# dedup by title similarity (Jaccard > 0.4) to catch redundant articles with different URLs
+def _deduplicate_by_title(articles: list[dict], threshold: float = 0.4) -> list[dict]:
+    kept: list[dict] = []
+    for article in articles:
+        title = article.get("title") or ""
+        if not any(_jaccard(title, k.get("title") or "") >= threshold for k in kept):
+            kept.append(article)
+    return kept
+
+
 # compute TF-IDF scores for every article against all articles, returns a dict per article with tfidf score
 def _build_tfidf_scores(articles: list[dict]) -> list[dict[str, float]]:
     N = len(articles)
@@ -176,6 +195,9 @@ def filter_articles(articles: list[dict], keywords: list[str]) -> list[dict]:
         if url and url not in seen_urls:
             seen_urls.add(url)
             unique.append(article)
+
+    # deduplicate by title similarity
+    unique = _deduplicate_by_title(unique)
 
     if not unique:
         return []

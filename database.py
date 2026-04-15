@@ -9,8 +9,6 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
 IS_PRODUCTION = os.getenv("PRODUCTION") == 'true'
 
-# supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 
 def init_db():
     logger.info("Supabase connected.")
@@ -63,3 +61,28 @@ def save_articles(articles: list[dict], run_id: str) -> None:
     res = supabase.table("articles").insert(rows).execute()
     
     logger.info("Saved %d articles (run %s)", len(rows), run_id)
+
+
+# fetch delivered URLs from the past week to avoid duplicates
+def get_seen_urls() -> set[str]:
+    supabase = get_client()
+    one_week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    
+    res = supabase.table("articles").select("url").gt("delivered_at", one_week_ago).execute()
+    urls = {row["url"] for row in res.data}
+    
+    logger.info("Fetched %d seen URLs from the past week", len(urls))
+    return urls
+
+
+# Return titles delivered in the last N days, for cross-run title dedup.
+def get_recent_titles(days: int = 7) -> list[str]:
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    supabase = get_client()
+    res = (
+        supabase.table("articles")
+        .select("title")
+        .gte("delivered_at", cutoff)
+        .execute()
+    )
+    return [row["title"] for row in res.data if row.get("title")]
