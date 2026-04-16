@@ -195,6 +195,18 @@ def filter_articles(articles: list[dict], keywords: list[str]) -> list[dict]:
         if url and url not in seen_urls:
             seen_urls.add(url)
             unique.append(article)
+    
+    # remove articles from blocked domains
+    unique = [
+        a for a in unique
+        if urlparse(a.get("url") or "").netloc.lstrip("www.") not in BLOCKED_DOMAINS
+    ]
+
+    # Remove articles from blocked sources
+    unique = [
+        a for a in unique
+        if (a.get("source") or {}).get("name", "") not in BLOCKED_SOURCE_NAMES
+    ]
 
     # deduplicate by title similarity
     unique = _deduplicate_by_title(unique)

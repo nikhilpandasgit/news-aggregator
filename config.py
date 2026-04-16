@@ -10,9 +10,11 @@ FETCH_TERMS_BY_TOPIC: dict[str, list[str]] = {
     ],
     "Startups & Funding": [
         "startup",
-        "funding round",
         "series A",
         "series B",
+        "seed funding",
+        "venture capital",
+        "raises $"
     ],
     "Jobs & Hiring": [
         "remote job",
@@ -84,6 +86,13 @@ KEYWORD_TOPICS: dict[str, str] = {
     "budget travel":           "Travel & Nomad",
     "travel guide":            "Travel & Nomad",
 }
+
+BLOCKED_DOMAINS: set[str] = {
+    "pypi.org",
+    "npmjs.com",
+}
+
+BLOCKED_SOURCE_NAMES: set[str] = {"Internet", "Unknown"}
 
 MAX_ARTICLES  = 40
 MAX_PER_TOPIC = 4
