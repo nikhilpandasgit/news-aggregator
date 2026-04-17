@@ -2,7 +2,8 @@ import math
 import re
 from datetime import datetime, timezone
 from collections import Counter, defaultdict
-from config import KEYWORD_TOPICS, MAX_PER_TOPIC, MIN_DESCRIPTION_LENGTH
+from urllib.parse import urlparse
+from config import KEYWORD_TOPICS, MAX_PER_TOPIC, MIN_DESCRIPTION_LENGTH, BLOCKED_DOMAINS, BLOCKED_SOURCE_NAMES
 
 
 # strip punctuation and split into tokens, returns a list of tokenized articles

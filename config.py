@@ -34,6 +34,7 @@ TITLE_SCOPED_TERMS: set[str] = {"AI", "LLM", "generative AI"}
 
 KEYWORDS: list = [
     # AI
+    "AI",
     "artificial intelligence",
     "AI agents",
     "large language model",
@@ -49,6 +50,9 @@ KEYWORDS: list = [
     "series A",
     "series B",
     "acquisition",
+    "seed funding",
+    "venture capital",
+    "raises $"
 
     # Jobs
     "remote job",
@@ -64,6 +68,7 @@ KEYWORDS: list = [
 ]
 
 KEYWORD_TOPICS: dict[str, str] = {
+    "ai": "AI & LLMs",
     "artificial intelligence": "AI & LLMs",
     "ai agents":               "AI & LLMs",
     "large language model":    "AI & LLMs",
@@ -77,6 +82,9 @@ KEYWORD_TOPICS: dict[str, str] = {
     "series a":                "Startups & Funding",
     "series b":                "Startups & Funding",
     "acquisition":             "Startups & Funding",
+    "seed funding":            "Startups & Funding",
+    "venture capital":         "Startups & Funding",
+    "raises $":                "Startups & Funding",    
     "remote job":              "Jobs & Hiring",
     "tech hiring":             "Jobs & Hiring",
     "software engineer":       "Jobs & Hiring",
@@ -95,7 +103,10 @@ BLOCKED_DOMAINS: set[str] = {
 BLOCKED_SOURCE_NAMES: set[str] = {"Internet", "Unknown"}
 
 MAX_ARTICLES  = 40
-MAX_PER_TOPIC = 4
+MAX_PER_TOPIC = 6
 MIN_DESCRIPTION_LENGTH = 80
-ARTICLES_PER_TOPIC = 15
-TITLE_SIMILARITY_THRESHOLD = 0.4
+ARTICLES_PER_TOPIC = 25
+TITLE_SIMILARITY_THRESHOLD = 0.6
+
+GROQ_MODEL="mixtral-8x7b-32768"
+SUMMARIZE_TOP_K=6
