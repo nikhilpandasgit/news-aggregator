@@ -11,6 +11,7 @@ from filter import filter_articles, _jaccard
 from formatter import format_digest
 from email_sender import send_email
 from database import init_db, save_articles, save_run, get_seen_urls, get_recent_titles
+from summariser import SummariserAgent
 
 logging.basicConfig(
     level=logging.INFO,
@@ -84,26 +85,29 @@ def run():
     if not articles:
         logger.warning("No articles returned from filter")
         return
+    
+    summariser = SummariserAgent()
+    summariser._call_groq()
 
-    # 5. format
-    try:
-        subject, html = format_digest(articles)
-    except Exception as exc:
-        logger.error("Formatting failed: %s", exc)
-        return
+    # # 5. format
+    # try:
+    #     subject, html = format_digest(articles)
+    # except Exception as exc:
+    #     logger.error("Formatting failed: %s", exc)
+    #     return
 
-    # 6. send email
-    try:
-        send_email(subject, html)
-        logger.info("Digest sent.")
-    except Exception as exc:
-        logger.error("Email failed: %s", exc)
-        return
+    # # 6. send email
+    # try:
+    #     send_email(subject, html)
+    #     logger.info("Digest sent.")
+    # except Exception as exc:
+    #     logger.error("Email failed: %s", exc)
+    #     return
         
-    # 7. Update delivered articles in database
-    topics = list({a.get("_topic", "General") for a in articles})
-    save_run(run_id, len(articles), topics)
-    save_articles(articles, run_id)
+    # # 7. Update delivered articles in database
+    # topics = list({a.get("_topic", "General") for a in articles})
+    # save_run(run_id, len(articles), topics)
+    # save_articles(articles, run_id)
 
 if __name__ == "__main__":
     run()
