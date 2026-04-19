@@ -14,7 +14,8 @@ FETCH_TERMS_BY_TOPIC: dict[str, list[str]] = {
         "series B",
         "seed funding",
         "venture capital",
-        "raises $"
+        "raises funding",
+        "completes fundraising",
     ],
     "Jobs & Hiring": [
         "remote job",
@@ -52,7 +53,8 @@ KEYWORDS: list = [
     "acquisition",
     "seed funding",
     "venture capital",
-    "raises $"
+    "raises funding",
+    "completes fundraising",
 
     # Jobs
     "remote job",
@@ -107,6 +109,7 @@ MAX_PER_TOPIC = 6
 MIN_DESCRIPTION_LENGTH = 80
 ARTICLES_PER_TOPIC = 25
 TITLE_SIMILARITY_THRESHOLD = 0.6
+MIN_SCORE_THRESHOLD=0.35
 
 GROQ_MODEL="llama-3.3-70b-versatile"
 SUMMARISE_TOP_K=6

@@ -86,28 +86,39 @@ def run():
         logger.warning("No articles returned from filter")
         return
     
-    summariser = SummariserAgent()
-    summariser._call_groq()
-
-    # # 5. format
-    # try:
-    #     subject, html = format_digest(articles)
-    # except Exception as exc:
-    #     logger.error("Formatting failed: %s", exc)
-    #     return
-
-    # # 6. send email
-    # try:
-    #     send_email(subject, html)
-    #     logger.info("Digest sent.")
-    # except Exception as exc:
-    #     logger.error("Email failed: %s", exc)
-    #     return
+    # Summariser call
+    try:        
+        summariser = SummariserAgent()
+    except ValueError as exc:
+        summariser = None
         
-    # # 7. Update delivered articles in database
-    # topics = list({a.get("_topic", "General") for a in articles})
-    # save_run(run_id, len(articles), topics)
-    # save_articles(articles, run_id)
+    if summariser:
+        try:
+            articles = summariser.summarise_batch(articles=articles)
+            logger.info("Summarisation complete")
+        except Exception as exc:
+            logger.error("Summarisation failed: %s", exc)
+
+
+    # 5. format
+    try:
+        subject, html = format_digest(articles)
+    except Exception as exc:
+        logger.error("Formatting failed: %s", exc)
+        return
+
+    # 6. send email
+    try:
+        send_email(subject, html)
+        logger.info("Digest sent.")
+    except Exception as exc:
+        logger.error("Email failed: %s", exc)
+        return
+        
+    # 7. Update delivered articles in database
+    topics = list({a.get("_topic", "General") for a in articles})
+    save_run(run_id, len(articles), topics)
+    save_articles(articles, run_id)
 
 if __name__ == "__main__":
     run()

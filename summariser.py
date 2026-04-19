@@ -24,10 +24,9 @@ class SummariserAgent:
             raise ValueError("GROQ_API_KEY is missing")
         self._client = Groq(api_key=groq_api_key)
     
+    
     # Call groq api for (summary, why it matters)
-    def _call_groq(self) -> tuple[str, str]:
-        title="How does OpenAI’s Agents SDK sandboxing work? #tech"
-        description="OpenAI updates Agents SDK for safer, in house agent testing OpenAI has released an update to its Agents SDK focused on security and operational reliability for agentic AI systems. The new version adds native sandboxing and an in distribution harness intended …"
+    def _call_groq(self, title: str, description: str) -> tuple[str, str]:
         prompt = _PROMPT.format(title=title, description=description)
         response = self._client.chat.completions.create(
             model=GROQ_MODEL,
@@ -36,4 +35,53 @@ class SummariserAgent:
             max_tokens=120
         )
 
-        print(response.json())
+        usage = response.usage
+        logger.debug(
+            "Tokens — prompt: %d, completion: %d, total: %d",
+            usage.prompt_tokens,
+            usage.completion_tokens,
+            usage.total_tokens,
+        )
+        
+        raw = response.choices[0].message.content.strip()
+        lines = [l.strip() for l in raw.splitlines() if l.strip() and l.strip() != "END"]
+        
+        if len(lines) < 2:
+            raise ValueError(f"Unexpected response format: {raw!r}")
+        
+        return lines[0], lines[1]
+    
+    
+    # Add _summary to article dict, fallback to default summary
+    def summarise(self, article: dict, retries: int = 2) -> dict:
+        title = article.get("title") or ""
+        description = article.get("description") or ""
+        
+        if not description.strip():
+            logger.debug("No description")
+            article["_summary"] = ""
+            article["_why"] = ""
+            return article
+
+        for attempt in range(1, retries + 2):
+            try:
+                summary, why = self._call_groq(title, description)
+                article["_summary"] = summary
+                article["_why"] = why
+                return article
+            
+            except Exception as exc:
+                if attempt <=retries:
+                    time.sleep(2 ** attempt)
+        
+        article["_summary"] = description
+        article["_why"] = "" 
+        return article
+    
+    
+    # Run summaries for each article
+    def summarise_batch(self, articles: list[dict]) -> list[dict]:
+        for i, article in enumerate(articles):
+            self.summarise(article=article)
+        
+        return articles

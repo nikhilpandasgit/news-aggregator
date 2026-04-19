@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timezone
 from collections import Counter, defaultdict
 from urllib.parse import urlparse
-from config import KEYWORD_TOPICS, MAX_PER_TOPIC, MIN_DESCRIPTION_LENGTH, BLOCKED_DOMAINS, BLOCKED_SOURCE_NAMES
+from config import KEYWORD_TOPICS, MAX_PER_TOPIC, MIN_DESCRIPTION_LENGTH, BLOCKED_DOMAINS, BLOCKED_SOURCE_NAMES, MIN_SCORE_THRESHOLD
 
 
 # strip punctuation and split into tokens, returns a list of tokenized articles
@@ -101,12 +101,12 @@ def _content_quality_score(article: dict) -> float:
     elif desc_len < 120:
         score *= 0.85
 
-    # version-number pattern in title: "packagename 0.1.1", "v2.3.4"
-    if re.search(r'\bv?\d+\.\d+(\.\d+)?\b', title):
-        if desc_len >= 120:
-            score *= 0.6
-        else:
-            score *= 0.4
+    # # version-number pattern in title: "packagename 0.1.1", "v2.3.4"
+    # if re.search(r'\bv?\d+\.\d+(\.\d+)?\b', title):
+    #     if desc_len >= 120:
+    #         score *= 0.6
+    #     else:
+    #         score *= 0.4
 
     if not author.strip():
         score *= 0.8
@@ -120,7 +120,7 @@ def _assign_topic(article: dict, keywords: list[str]) -> str:
     topic_hits: dict[str, int] = Counter()
 
     for kw in keywords:
-        if kw.lower() in text:
+        if re.search(r'\b' + re.escape(kw.lower()) + r'\b', text):
             topic = KEYWORD_TOPICS.get(kw.lower(), "General")
             topic_hits[topic] += 1
 
@@ -141,23 +141,21 @@ def score_article(
     desc  = (article.get("description") or "").lower()
     kw_score = 0.0
 
-    # calculate keyword score for the article
     for kw in keywords:
         kw = kw.lower()
         is_phrase = len(kw.split()) > 1
+        pattern = r'\b' + re.escape(kw) + r'\b'
 
-        title_hits = title.count(kw)
-        desc_hits  = desc.count(kw)
+        title_hits = len(re.findall(pattern, title))
+        desc_hits  = len(re.findall(pattern, desc))
 
         if title_hits:
             kw_score += title_hits * (5 if is_phrase else 3)
         if desc_hits:
             kw_score += desc_hits * (3 if is_phrase else 1)
 
-    # divide by 20.0 to normalise into 0.0 - 1.0 range
     kw_norm = min(kw_score / 20.0, 1.0)
 
-    # TF-IDF score for the article
     tfidf_sum = sum(
         tfidf_scores.get(token, 0.0)
         for kw in keywords
@@ -165,10 +163,7 @@ def score_article(
     )
     tfidf_norm = min(tfidf_sum / 0.5, 1.0)
 
-    # base combined score
     combined = (kw_norm * 0.5) + (tfidf_norm * 0.3) + (recency * 0.2)
-
-    # content quality multiplier
     quality = _content_quality_score(article)
     return round(combined * quality, 4)
 
@@ -229,7 +224,7 @@ def filter_articles(articles: list[dict], keywords: list[str]) -> list[dict]:
         desc  = (article.get("description") or "").lower()
         has_keyword_hit = any(kw.lower() in title or kw.lower() in desc for kw in keywords)
 
-        if has_keyword_hit:
+        if has_keyword_hit and score >= MIN_SCORE_THRESHOLD:
             article["_score"]   = score
             article["_recency"] = recency
             article["_topic"]   = _assign_topic(article, keywords)

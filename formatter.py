@@ -12,7 +12,6 @@ TOPIC_COLOURS: dict[str, str] = {
 DEFAULT_COLOUR = "#6b7280"
 
 def _recency_label(recency: float) -> str:
-    """Convert recency factor back to a human-friendly freshness badge."""
     if recency >= 0.95:
         return "fresh"
     if recency >= 0.75:
@@ -36,9 +35,15 @@ def _topic_section(topic: str, articles: list[dict], start_index: int) -> str:
         title   = a.get("title") or "Article"
         url     = a.get("url") or "#"
         source  = (a.get("source") or {}).get("name") or "Unknown Source"
-        desc    = a.get("description") or ""
         score   = a.get("_score", 0)
         recency = a.get("_recency", 0.75)
+
+        # use LLM summary if available, fall back to original description
+        summary = a.get("_summary")
+        desc = a.get("description")
+
+        # flag whether this article was AI-summarised
+        is_summarised = bool(a.get("_summary"))
 
         score_pct   = f"{int(score * 100)}%"
         rec_label   = _recency_label(recency)
@@ -46,17 +51,24 @@ def _topic_section(topic: str, articles: list[dict], start_index: int) -> str:
 
         badge_score   = f'<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#f0f0f0;color:#888;">{score_pct}</span>'
         badge_recency = f'<span style="font-size:11px;padding:2px 8px;border-radius:10px;{rec_style}">{rec_label}</span>'
+        badge_ai      = '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:#f0f0ff;color:#6366f1;margin-left:4px;">AI summary</span>' if is_summarised else ''
+
+        if summary:
+            content_block = f'<p style="font-size:13px;color:#6366f1;margin:6px 0 0;line-height:1.5;">💡 {summary}</p>'
+        else:
+            content_block = f'<p style="color:#6b7280;font-size:13px;margin:5px 0 0;line-height:1.5;">{desc}</p>'
+
 
         rows.append(f"""
         <tr>
             <td style="padding:14px 0;border-bottom:1px solid #f0f0f0;">
             <span style="color:#9ca3af;font-size:12px;">{i}.&nbsp;{source}</span>
-            &nbsp;{badge_score}&nbsp;{badge_recency}<br>
+            &nbsp;{badge_score}&nbsp;{badge_recency}{badge_ai}<br>
             <a href="{url}"
                 style="font-size:15px;font-weight:600;color:#111827;text-decoration:none;line-height:1.4;">
                 {title}
             </a><br>
-            <p style="color:#6b7280;font-size:13px;margin:5px 0 0;line-height:1.5;">{desc}</p>
+            {content_block}
             </td>
         </tr>""")
 
@@ -86,27 +98,19 @@ def format_digest(articles: list[dict]) -> tuple[str, str]:
     date_str = datetime.now().strftime("%B %d, %Y")
     subject  = f"Your news digest — {date_str}"
 
-    # group by topic
     groups: dict[str, list[dict]] = defaultdict(list)
     for a in articles:
         groups[a.get("_topic", "General")].append(a)
 
-    # preferred topic display order
-    topic_order = [
-        "AI & LLMs",
-        "Startups & Funding",
-        "Jobs & Hiring",
-        "Travel & Nomad",
-        "General",
-    ]
-
+    topic_order = ["AI & LLMs", "Startups & Funding", "Jobs & Hiring", "Travel & Nomad", "General"]
     ordered_topics = [t for t in topic_order if t in groups]
-    # any unexpected topic at the end
     for t in groups:
         if t not in ordered_topics:
             ordered_topics.append(t)
 
     total = len(articles)
+    summarised_count = sum(1 for a in articles if a.get("_summary"))
+
     topic_summary_parts = [
         f'<span style="color:{TOPIC_COLOURS.get(t, DEFAULT_COLOUR)};font-weight:600;">'
         f'{t} ({len(groups[t])})</span>'
@@ -114,7 +118,12 @@ def format_digest(articles: list[dict]) -> tuple[str, str]:
     ]
     topic_summary = " &middot; ".join(topic_summary_parts)
 
-    # build all topic sections
+    # show summarised count in footer only if summarisation ran
+    summary_note = (
+        f' &middot; {summarised_count} AI-summarised'
+        if summarised_count else ''
+    )
+
     sections: list[str] = []
     idx = 1
     for topic in ordered_topics:
@@ -159,7 +168,7 @@ def format_digest(articles: list[dict]) -> tuple[str, str]:
 
         <!-- footer -->
         <p style="margin-top:36px;font-size:11px;color:#d1d5db;text-align:center;">
-            Sent by your personal news agent &mdash; scores shown as relevance&nbsp;%
+            Sent by your personal news agent &mdash; scores shown as relevance&nbsp;%{summary_note}
         </p>
 
         </body>
