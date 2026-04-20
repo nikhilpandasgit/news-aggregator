@@ -17,71 +17,69 @@ Description: {description}
 
 Respond with nothing else — no labels, no markdown, no preamble."""
 
+
 class SummariserAgent:
     def __init__(self):
         groq_api_key = os.getenv("GROQ_API_KEY")
         if not groq_api_key:
             raise ValueError("GROQ_API_KEY is missing")
         self._client = Groq(api_key=groq_api_key)
-    
-    
-    # Call groq api for (summary, why it matters)
+
     def _call_groq(self, title: str, description: str) -> tuple[str, str]:
         prompt = _PROMPT.format(title=title, description=description)
         response = self._client.chat.completions.create(
             model=GROQ_MODEL,
-            messages=[{"role" : "user", "content": prompt}],
+            messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=120
+            max_tokens=120,
         )
 
         usage = response.usage
-        logger.debug(
-            "Tokens — prompt: %d, completion: %d, total: %d",
-            usage.prompt_tokens,
-            usage.completion_tokens,
-            usage.total_tokens,
-        )
-        
         raw = response.choices[0].message.content.strip()
         lines = [l.strip() for l in raw.splitlines() if l.strip() and l.strip() != "END"]
-        
+
         if len(lines) < 2:
             raise ValueError(f"Unexpected response format: {raw!r}")
-        
+
         return lines[0], lines[1]
-    
-    
-    # Add _summary to article dict, fallback to default summary
+
     def summarise(self, article: dict, retries: int = 2) -> dict:
-        title = article.get("title") or ""
+        title       = article.get("title") or ""
         description = article.get("description") or ""
-        
+
         if not description.strip():
-            logger.debug("No description")
             article["_summary"] = ""
-            article["_why"] = ""
+            article["_why"]     = ""
             return article
 
         for attempt in range(1, retries + 2):
             try:
                 summary, why = self._call_groq(title, description)
                 article["_summary"] = summary
-                article["_why"] = why
+                article["_why"]     = why
+                logger.info("Summarised [attempt %d]: %s", attempt, title[:60])
                 return article
-            
             except Exception as exc:
-                if attempt <=retries:
+                logger.warning(
+                    "Summarise attempt %d/%d failed for '%s': %s",
+                    attempt, retries + 1, title[:60], exc,
+                )
+                if attempt <= retries:
                     time.sleep(2 ** attempt)
-        
-        article["_summary"] = description
-        article["_why"] = "" 
+
+        logger.error("Summarise gave up on '%s' — using original description", title[:60])
+        article["_summary"] = ""   # empty so formatter falls back to grey description
+        article["_why"]     = ""
         return article
-    
-    
-    # Run summaries for each article
+
     def summarise_batch(self, articles: list[dict]) -> list[dict]:
+        for a in articles:
+            a.setdefault("_summary", "")
+            a.setdefault("_why", "")
+
+        total = min(len(articles), SUMMARISE_TOP_K)
+
         for i, article in enumerate(articles):
             self.summarise(article=article)
-        
+
         return articles
