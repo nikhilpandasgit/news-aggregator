@@ -116,9 +116,9 @@ def run():
         return
         
     # 7. Update delivered articles in database
-    topics = list({a.get("_topic", "General") for a in articles})
-    save_run(run_id, len(articles), topics)
-    save_articles(articles, run_id)
+    # topics = list({a.get("_topic", "General") for a in articles})
+    # save_run(run_id, len(articles), topics)
+    # save_articles(articles, run_id)
 
 if __name__ == "__main__":
     run()

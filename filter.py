@@ -85,35 +85,6 @@ def _recency_factor(published_at: str | None) -> float:
     return 1.0 - 0.5 * (age_hours - 6) / 42
 
 
-# Returns a multiplier based on content shape.
-def _content_quality_score(article: dict) -> float:
-    score = 1.0
-
-    desc   = article.get("description") or ""
-    title  = article.get("title") or ""
-    author = article.get("author") or ""
-
-    desc_len = len(desc.strip())
-    if desc_len < 40:
-        score *= 0.2
-    elif desc_len < MIN_DESCRIPTION_LENGTH:
-        score *= 0.6
-    elif desc_len < 120:
-        score *= 0.85
-
-    # # version-number pattern in title: "packagename 0.1.1", "v2.3.4"
-    # if re.search(r'\bv?\d+\.\d+(\.\d+)?\b', title):
-    #     if desc_len >= 120:
-    #         score *= 0.6
-    #     else:
-    #         score *= 0.4
-
-    if not author.strip():
-        score *= 0.8
-
-    return round(score, 3)
-
-
 # Return the most relevant topic label for an article
 def _assign_topic(article: dict, keywords: list[str]) -> str:
     text = f"{article.get('title') or ''} {article.get('description') or ''}".lower()
@@ -129,7 +100,7 @@ def _assign_topic(article: dict, keywords: list[str]) -> str:
     return topic_hits.most_common(1)[0][0]
 
 
-# Hybrid Scoring = 50% keyword_score + 30% tfidf_score + 20% recency * content_quality
+# Hybrid Scoring = 50% keyword_score + 30% tfidf_score + 20% recency
 def score_article(
     article: dict,
     keywords: list[str],
@@ -164,8 +135,7 @@ def score_article(
     tfidf_norm = min(tfidf_sum / 0.5, 1.0)
 
     combined = (kw_norm * 0.5) + (tfidf_norm * 0.3) + (recency * 0.2)
-    quality = _content_quality_score(article)
-    return round(combined * quality, 4)
+    return round(combined, 4)
 
 
 # After scoring, enforcing a per-topic cap so no single topic floods the digest
