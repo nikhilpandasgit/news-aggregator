@@ -42,7 +42,7 @@ def save_run(run_id: str, article_count: int, topics: list[str]) -> None:
 
 
 # save articles per run to `articles` table
-def save_articles(articles: list[dict], run_id: str) -> None:
+def save_articles(articles: list[dict], run_id: str) -> list[dict]:
     now = datetime.now(timezone.utc).isoformat()
     supabase = get_client()
     
@@ -59,8 +59,45 @@ def save_articles(articles: list[dict], run_id: str) -> None:
     ]
     
     res = supabase.table("articles").insert(rows).execute()
-    
+    inserted = res.data
+
     logger.info("Saved %d articles (run %s)", len(rows), run_id)
+    return inserted
+
+
+# Save per-article ranking scores
+def save_article_scores(articles: list[dict], inserted_articles: list[dict], run_id: str) -> None:
+    supabase = get_client()
+    now = datetime.now(timezone.utc).isoformat()
+
+    # "url": "id" lookup for the inserted articles
+    url_to_id: dict[str, int] = {
+        row["url"] : row["id"]
+        for row in inserted_articles
+        if row.get("url") and row.get("id")
+    }
+
+    rows = []
+    for a in articles:
+        article_id = url_to_id.get(a.get("url", ""))
+        if not article_id:
+            logger.warning("No article_id found for url: %s — skipping score row", a.get("url"))
+            continue
+
+        rows.append({
+            "article_id": article_id,
+            "run_id": run_id,
+            "topic": a.get("_topic", "General"),
+            "filter_score": a.get("_score", 0.0),
+            "semantic_score": a.get("_semantic_score"),
+            "final_score": a.get("_final_score", a.get("_score", 0.0)),
+            "published_at": a.get("publishedAt"),
+            "created_at": now,
+        })
+
+        if rows:
+            supabase.table("article_scores").insert(rows).execute()
+            logger.info("Saved %d article scores (run %s)", len(rows), run_id)
 
 
 # fetch delivered URLs from the past week to avoid duplicates
