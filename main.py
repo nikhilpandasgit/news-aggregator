@@ -5,13 +5,14 @@ from collections import Counter
 from dotenv import load_dotenv
 load_dotenv()
 
-from config import KEYWORDS, MAX_ARTICLES, TITLE_SIMILARITY_THRESHOLD
+from config import KEYWORDS, MAX_ARTICLES, TITLE_SIMILARITY_THRESHOLD, ENABLE_LLM_RERANK
 from fetcher import fetch_articles
 from filter import filter_articles, _jaccard
 from formatter import format_digest
 from email_sender import send_email
-from database import init_db, save_articles, save_run, get_seen_urls, get_recent_titles
+from database import init_db, save_articles, save_run, get_seen_urls, get_recent_titles, save_article_scores
 from summariser import SummariserAgent
+from ranker import RankerAgent
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,8 +87,23 @@ def run():
         logger.warning("No articles returned from filter")
         return
 
-        # Have to implement LLM ranking here. 
-    # Summariser call
+    # 5. Semantic Ranking filtered articles using LLM
+    if ENABLE_LLM_RERANK:
+        try:
+            ranker = RankerAgent()
+            articles = ranker.rank(articles)
+            logger.info("ranking complete.")
+        except ValueError as exc:
+            logger.warning("RankerAgent init failed: %s", exc)
+        except Exception as exc:
+            logger.error("Ranking failed: %s", exc)
+    else:
+        for a in articles:
+            a["_final_score"] = a.get("_score", 0.0)
+            a["_semantic_score"] = None
+
+
+    # 6. Summariser call
     try:        
         summariser = SummariserAgent()
     except ValueError as exc:
@@ -101,14 +117,14 @@ def run():
             logger.error("Summarisation failed: %s", exc)
 
 
-    # 5. format
+    # 7. format
     try:
         subject, html = format_digest(articles)
     except Exception as exc:
         logger.error("Formatting failed: %s", exc)
         return
 
-    # 6. send email
+    # 8. send email
     try:
         send_email(subject, html)
         logger.info("Digest sent.")
@@ -116,10 +132,15 @@ def run():
         logger.error("Email failed: %s", exc)
         return
         
-    # 7. Update delivered articles in database
+    # 9. Update delivered articles in database
     topics = list({a.get("_topic", "General") for a in articles})
     save_run(run_id, len(articles), topics)
-    save_articles(articles, run_id)
+    inserted_articles = save_articles(articles, run_id)
+
+    try:
+        save_article_scores(articles, inserted_articles, run_id)
+    except Exception as exc:
+        logger.error("Failed to save article scores: %s", exc)
 
 if __name__ == "__main__":
     run()

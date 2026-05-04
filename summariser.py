@@ -49,15 +49,14 @@ class SummariserAgent:
 
         if not description.strip():
             article["_summary"] = ""
-            article["_why"]     = ""
+            article["_why"] = ""
             return article
 
         for attempt in range(1, retries + 2):
             try:
                 summary, why = self._call_groq(title, description)
                 article["_summary"] = summary
-                article["_why"]     = why
-                logger.info("Summarised [attempt %d]: %s", attempt, title[:60])
+                article["_why"] = why
                 return article
             except Exception as exc:
                 logger.warning(

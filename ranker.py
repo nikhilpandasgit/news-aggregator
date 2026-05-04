@@ -37,7 +37,7 @@ class RankerAgent:
     
     def _score_article(self, article: dict, retries: int = 2) -> float:
         title = article.get("title") or ""
-        description: article.get("description") or ""
+        description= article.get("description") or ""
         topic = article.get("_topic", "General")
 
         prompt = _PROMPT.format(title=title, description=description, topic=topic)
